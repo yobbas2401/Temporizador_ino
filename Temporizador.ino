@@ -18,9 +18,10 @@ bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
 uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
-uint8_t Timer1[NumTimer][5]= {{0,0,3,1,5}, //CONFIGURACION DE TIEMPO PARA CADA TIMER
-                              {0,0,3,1,5},
+uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
+                              {0,0,3,1,0},
                               {0,0,0,1,0}};
+uint8_t btnstate=0;
 void setup ()
 {
   Serial.begin(9600);
@@ -37,13 +38,17 @@ void setup ()
 
 void loop ()
 {
+  if(analogRead(1)==0 && analogRead(1)<=150){btnstate=BtnNone;}
+  if(analogRead(1)>=151){btnstate=readBtns();}
+delay(2);
 Temporizador_por_Salida2();
 
-if (readBtns()== BtnEnter || C_ExitMenu!=0)
+if (btnstate == BtnEnter || C_ExitMenu!=0)
 {
+    if(C_ExitMenu==0){btnstate=BtnNone;}
     C_ExitMenu=1;
     if (C_NAV==0){C_MENU=Navegacion(C_MENU, 4);}
-    if (readBtns()==BtnBack){C_ExitMenu=0;delay(50);}
+    if (btnstate==BtnBack){C_ExitMenu=0;delay(1);btnstate=BtnNone;}
     switch (C_MENU)
     {
     case 1: //SELECCIONE UN TIMER A CONF ##############################################################3
@@ -54,12 +59,13 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
           lcd.print(C_TIMER);
           lcd.setCursor(0, 1);
           lcd.print("SELECT TIMER");
-          delay(150);
+          delay(300);
           lcd.clear(); 
       }
-      if ( readBtns()==BtnEnter || C_NAV!=0)
+      if ( btnstate==BtnEnter || C_NAV!=0)
       {
-        delay(100);
+        if(C_NAV==0)btnstate=BtnNone;
+        delay(1);
         C_NAV=1;
         C_ENTER=Navegacion1(C_ENTER, 3);
         if (C_ENTER==0){C_TIMER=incremento_01(C_TIMER, NumTimer);}
@@ -75,9 +81,9 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         lcd.print(" | ");
         if ( Timer1[C_TIMER][3]==1)lcd.print(" ON ");
         if ( Timer1[C_TIMER][3]==0)lcd.print(" OFF ");
-        delay(150);
+        delay(300);
         lcd.clear();
-        if (readBtns()==BtnBack){C_NAV=0; C_ITEMH=0; C_ENTER=0;}
+        if (btnstate==BtnBack){C_NAV=0; C_ITEMH=0; C_ENTER=0; btnstate=BtnNone;}
       }
       break;
 
@@ -92,9 +98,10 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         delay(150);
         lcd.clear();
       }
-      if ( readBtns()==BtnEnter || C_NAV==1)
+      if ( btnstate==BtnEnter || C_NAV!=0)
       {
-        delay(100);
+        //delay(200);
+        if(C_NAV==0)btnstate=BtnNone;
         C_NAV=1;
         C_ENTER=Navegacion1(C_ENTER, 7);
         DATE[C_TIMER][C_ENTER]=incremento_01(DATE[C_TIMER][C_ENTER], 2);
@@ -114,9 +121,9 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
             lcd.print("|");
           }  
         }
-        delay(150);
+        delay(100);
         lcd.clear();
-        if (readBtns()==BtnBack){ C_NAV=0; C_ENTER=0;}
+        if (btnstate==BtnBack){ C_NAV=0; C_ENTER=0;btnstate=BtnNone;}
       }
       break;
 
@@ -131,9 +138,10 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         delay(150);
         lcd.clear();
       }
-      if ( readBtns()==BtnEnter || C_NAV!=0)
+      if ( btnstate==BtnEnter || C_NAV!=0)
       {
-        delay(100);
+        if(C_NAV==0)btnstate=BtnNone;
+        delay(1);
         C_NAV=1;
         C_ENTER=Navegacion1(C_ENTER, 3);
         if (C_ENTER==0){C_ITEMH=24;}
@@ -152,7 +160,7 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         lcd.print(Timer1[C_TIMER][2]);
         delay(150);
         lcd.clear();
-        if (readBtns()==BtnBack){C_NAV=0;delay(50);}
+        if (btnstate==BtnBack){C_NAV=0;C_ENTER=0;delay(50);btnstate=BtnNone;}
       }
       break;
 
@@ -164,10 +172,11 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
       lcd.print("SALIR");
       delay(150);
       lcd.clear();
-      if (readBtns()==BtnEnter)
+      if (btnstate==BtnEnter)
        {
+        btnstate=BtnNone;
         C_ExitMenu=0;
-        delay(80);
+        delay(1);
        }
       break;
 
@@ -208,62 +217,67 @@ void Temporizador_por_Salida2()
 
 int8_t incremento_01(int8_t item, int8_t num_item)
 {
-if (readBtns()==BtnUp) 
+if (btnstate==BtnUp) 
     {
       item++;
       if ( item == num_item)
       {
         item = 0;
       }
+      btnstate=BtnNone;
     }
-    if (readBtns() ==BtnDown) 
+    if (btnstate ==BtnDown) 
     {
       item--;
       if ( item == -1 )
       {
         item = num_item-1;
       }
+      btnstate=BtnNone;
     }
-    return item;
+    return item; 
 }
 int8_t Navegacion(int8_t item, int8_t num_item)
 {
-if (readBtns()==BtnUp) 
+if (btnstate==BtnUp) 
     {
       item++;
       if ( item == num_item+1)
       {
         item = 1;
       }
+      btnstate=BtnNone;
     }
-    if (readBtns() ==BtnDown) 
+    if (btnstate ==BtnDown) 
     {
       item--;
       if ( item == 0 )
       {
         item = num_item;
       }
+      btnstate=BtnNone;
     }
-    return item;
+    return item; 
 }
 
 int8_t Navegacion1(int8_t item, int8_t num_item)
 {
-if (readBtns()==BtnEnter) 
+if (btnstate==BtnEnter) 
     {
       item++;
       if ( item == num_item)
       {
         item = 0;
       }
+      btnstate=BtnNone;
     }
-    return item;
+    return item; 
 }
 
 int8_t readBtns()
 {
   BtnAdc=analogRead(1);
-delay(10);
+delay(100);
   if ( BtnAdc >= 1019) return BtnEnter;
   if ( BtnAdc >= 800 && BtnAdc <= 850 ) return BtnUp;  
   if ( BtnAdc >= 600 && BtnAdc <= 630 ) return BtnDown;  
