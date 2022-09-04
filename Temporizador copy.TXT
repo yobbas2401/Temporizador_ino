@@ -18,8 +18,8 @@ bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
 uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
-uint8_t Timer1[NumTimer][5]= {{0,0,3,1,5}, //CONFIGURACION DE TIEMPO PARA CADA TIMER
-                              {0,0,3,1,5},
+uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
+                              {0,0,3,1,0},
                               {0,0,0,1,0}};
 void setup ()
 {
@@ -59,7 +59,7 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
       }
       if ( readBtns()==BtnEnter || C_NAV!=0)
       {
-        delay(100);
+        delay(200);
         C_NAV=1;
         C_ENTER=Navegacion1(C_ENTER, 3);
         if (C_ENTER==0){C_TIMER=incremento_01(C_TIMER, NumTimer);}
@@ -92,9 +92,9 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         delay(150);
         lcd.clear();
       }
-      if ( readBtns()==BtnEnter || C_NAV==1)
+      if ( readBtns()==BtnEnter || C_NAV!=0)
       {
-        delay(100);
+        //delay(200);
         C_NAV=1;
         C_ENTER=Navegacion1(C_ENTER, 7);
         DATE[C_TIMER][C_ENTER]=incremento_01(DATE[C_TIMER][C_ENTER], 2);
@@ -152,7 +152,7 @@ if (readBtns()== BtnEnter || C_ExitMenu!=0)
         lcd.print(Timer1[C_TIMER][2]);
         delay(150);
         lcd.clear();
-        if (readBtns()==BtnBack){C_NAV=0;delay(50);}
+        if (readBtns()==BtnBack){C_NAV=0;C_ENTER=0;delay(50);}
       }
       break;
 
@@ -263,7 +263,7 @@ if (readBtns()==BtnEnter)
 int8_t readBtns()
 {
   BtnAdc=analogRead(1);
-delay(10);
+delay(100);
   if ( BtnAdc >= 1019) return BtnEnter;
   if ( BtnAdc >= 800 && BtnAdc <= 850 ) return BtnUp;  
   if ( BtnAdc >= 600 && BtnAdc <= 630 ) return BtnDown;  

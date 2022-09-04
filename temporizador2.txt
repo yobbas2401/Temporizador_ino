@@ -15,6 +15,7 @@
 #define on_off 10
 //#include <LiquidCrystal_I2C.h> 
 //LiquidCrystal_I2C lcd(0x27, 16, 2);
+//s15041505
 
 char DiaSemana[][4] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
 uint8_t rs = 13, rw=12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
