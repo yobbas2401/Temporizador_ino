@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <Sodaq_DS3231.h>
 #include <LiquidCrystal.h>
+#include <AT24CX.h> //EPROM
+
 #define NumTimer 3 
 #define BtnEnter 1
 #define BtnUp 2
@@ -10,6 +12,7 @@
 #define NumSalidas 3
 #define enter 0
 #define updown 1
+AT24C32 EepromRTC;
 uint8_t rs = 13, rw=12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, rw, en, d4, d5, d6, d7);
 char DiaSemana[][4] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
@@ -20,6 +23,8 @@ int8_t timer_select=0, setup_menu=0, item_val=0, setup_item=0, item_menu=0, item
 bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#####################################
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
+byte DIAS[NumTimer]={0b00000000, 0b00100000,0b00011111};
+
 uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
 uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
                               {0,0,3,1,0},
@@ -27,6 +32,8 @@ uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURAC
 uint8_t btnstate=0;
 void setup ()
 {
+
+  
   Serial.begin(9600);
   //Wire.begin();
   rtc.begin();
@@ -41,7 +48,7 @@ void setup ()
 
 void loop ()
 {
-  Temporizador_por_Salida2();
+  Temporizador_por_Salida3();
   btnstate=readBtns();
 delay(150);
 
@@ -204,6 +211,31 @@ void Temporizador_por_Salida2()
         }
     }
 }
+
+void Temporizador_por_Salida3()
+{
+  DateTime now = rtc.now();
+  for (int i = 0; i < NumTimer; i++)//verifica la programacion de cada timer
+    {
+        for (int j = 0; j < 7; j++)
+        {
+          if (DIAS[i]<<j==1)
+          {
+            if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
+                {
+                if(now.hour()==Timer1[i][0] && now.minute()==Timer1[i][1] && now.second()==Timer1[i][2])  //verifica el tiempo de cada timer
+                    {
+                                  //Salida      on/off
+                    digitalWrite( Salida[Timer1[i][4]], Timer1[i][3]);
+                    //PORTD=(Timer1[i][3]<<PORT6);
+                    }
+                } 
+          }
+
+        }
+    }
+}
+
 
 int8_t val_increment(bool Btn, int8_t item, int8_t num_item)
 {
