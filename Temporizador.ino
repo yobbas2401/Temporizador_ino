@@ -1,8 +1,6 @@
 #include <Wire.h>
 #include <Sodaq_DS3231.h>
 #include <LiquidCrystal.h>
-#include <AT24CX.h> //EPROM
-
 #define NumTimer 3 
 #define BtnEnter 1
 #define BtnUp 2
@@ -12,7 +10,6 @@
 #define NumSalidas 3
 #define enter 0
 #define updown 1
-AT24C32 EepromRTC;
 uint8_t rs = 13, rw=12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, rw, en, d4, d5, d6, d7);
 char DiaSemana[][4] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
@@ -23,8 +20,6 @@ int8_t timer_select=0, setup_menu=0, item_val=0, setup_item=0, item_menu=0, item
 bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#####################################
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
-byte DIAS[NumTimer]={0b00000000, 0b00100000,0b00011111};
-
 uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
 uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
                               {0,0,3,1,0},
@@ -32,10 +27,8 @@ uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURAC
 uint8_t btnstate=0;
 void setup ()
 {
-
-  
   Serial.begin(9600);
-  //Wire.begin();
+  Wire.begin();
   rtc.begin();
   lcd.begin(16, 2);
   lcd.clear();
@@ -48,8 +41,8 @@ void setup ()
 
 void loop ()
 {
-  Temporizador_por_Salida3();
-  btnstate=readBtns();
+Temporizador_por_Salida2();
+btnstate=readBtns();
 delay(150);
 
 if (btnstate==BtnEnter){push_enter=1;}
@@ -82,21 +75,23 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         if(setup_item==0){push_enter=0; lcd.clear(); }
         setup_item=1;
         item_modify=val_increment(enter, item_modify, 3);
-        if (item_modify==0){timer_select=val_increment(updown, timer_select, NumTimer);}
-        if (item_modify==2){item_val=NumSalidas;}
-        if (item_modify==1){item_val=2;} 
+        if (item_modify==0){timer_select=val_increment(updown, timer_select, NumTimer);item_blink(2,1);}
+        if (item_modify==2){item_val=NumSalidas;item_blink(7,1);}
+        if (item_modify==1){item_val=2;item_blink(12,1);} 
         if (item_modify!=0){Timer1[timer_select][item_modify+2]=val_increment(updown, Timer1[timer_select][item_modify+2], item_val);} 
         lcd.setCursor(0, 0);
-        lcd.print("TIMER |OUT| O/F");
+        lcd.print("TIMER|OUT|ON/OFF");
         lcd.setCursor(2, 1);
         lcd.print(timer_select);
+        lcd.setCursor(5, 1);
+        lcd.print("|");
         lcd.setCursor(7, 1);
         lcd.print(Timer1[timer_select][4]);
-        lcd.print(" | ");
-        if ( Timer1[timer_select][3]==1)lcd.print(" ON ");
-        if ( Timer1[timer_select][3]==0)lcd.print(" OFF ");
-        //delay(300);
-        //lcd.clear();
+        lcd.setCursor(9, 1);
+        lcd.print("|");
+        //lcd.print(" | ");
+        if ( Timer1[timer_select][3]==1){lcd.setCursor(12, 1);lcd.print("ON");}
+        if ( Timer1[timer_select][3]==0){lcd.setCursor(12, 1);lcd.print("OFF");}
         if (btnstate==BtnNone && push_back==1){setup_item=0; item_val=0; item_modify=0; push_back=0;lcd.clear();}
       }
       break;
@@ -118,8 +113,9 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         item_modify=val_increment(enter, item_modify, 7);
         DATE[timer_select][item_modify]=val_increment(updown, DATE[timer_select][item_modify], 2);
         lcd.setCursor(0, 0);
-        lcd.print("L M M J V S D");
+        lcd.print(" L M M J V S D");
         lcd.setCursor(0, 1);
+		lcd.print("|");
         for (int8_t i=0; i<7; i++)
         {
           if (DATE[timer_select][i]!=0)
@@ -133,6 +129,8 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
             lcd.print("|");
           }  
         }
+		delay(100);
+        item_blink((((item_modify+1)*2)-1),1);
         if (btnstate==BtnNone && push_back==1){ setup_item=0; item_modify=0;push_back=0;lcd.clear();}
       }
       break;
@@ -151,18 +149,21 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         if(setup_item==0){push_enter=0;lcd.clear();}
         setup_item=1;
         item_modify=val_increment(enter, item_modify, 3);
-        if (item_modify==0){item_val=24;}
-        if (item_modify==1){item_val=60;}
-        if (item_modify==2){item_val=60;}
+        if (item_modify==0){item_val=24;item_blink(7,1);}
+        if (item_modify==1){item_val=60;item_blink(11,1);}
+        if (item_modify==2){item_val=60;item_blink(14,1);}
         Timer1[timer_select][item_modify]=val_increment(updown, Timer1[timer_select][item_modify], item_val);
         lcd.setCursor(0, 0);
         lcd.print("TIMER");
         lcd.print(timer_select);
-        lcd.print(" H | M| S");
+        lcd.print(" H | M | S");
         lcd.setCursor(7, 1);
         lcd.print(Timer1[timer_select][0]);
+        lcd.setCursor(9, 1);
         lcd.print(":");
+        lcd.setCursor(11, 1);
         lcd.print(Timer1[timer_select][1]);
+        lcd.setCursor(13, 1);
         lcd.print(":");
         lcd.print(Timer1[timer_select][2]);
         if (btnstate==BtnNone && push_back==1){setup_item=0;item_modify=0;push_back=0;lcd.clear();}
@@ -211,31 +212,6 @@ void Temporizador_por_Salida2()
         }
     }
 }
-
-void Temporizador_por_Salida3()
-{
-  DateTime now = rtc.now();
-  for (int i = 0; i < NumTimer; i++)//verifica la programacion de cada timer
-    {
-        for (int j = 0; j < 7; j++)
-        {
-          if (DIAS[i]<<j==1)
-          {
-            if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
-                {
-                if(now.hour()==Timer1[i][0] && now.minute()==Timer1[i][1] && now.second()==Timer1[i][2])  //verifica el tiempo de cada timer
-                    {
-                                  //Salida      on/off
-                    digitalWrite( Salida[Timer1[i][4]], Timer1[i][3]);
-                    //PORTD=(Timer1[i][3]<<PORT6);
-                    }
-                } 
-          }
-
-        }
-    }
-}
-
 
 int8_t val_increment(bool Btn, int8_t item, int8_t num_item)
 {
@@ -293,8 +269,8 @@ void pantalla_principal()
   DateTime now = rtc.now();
   if(now.second()!=lastsecond)
   {
-    lcd.clear();
-    lcd.setCursor(0, 0);
+  lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print(now.year(), DEC);
   lcd.print('/');
   lcd.print(now.month(), DEC);
@@ -313,4 +289,10 @@ void pantalla_principal()
   
   //delay(250); 
   //lcd.clear();
+}
+void item_blink(uint8_t col, uint8_t row)
+{
+  lcd.setCursor(col, row);
+  lcd.print(" ");
+  delay(100);
 }
