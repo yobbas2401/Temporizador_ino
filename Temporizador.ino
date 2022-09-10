@@ -24,6 +24,8 @@ uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##########################
 uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
                               {0,0,3,1,0},
                               {0,0,0,1,0}};
+byte DIAS[NumTimer]={0b00000000, 0b00100000,0b00011111};
+bool togle=0;
 uint8_t btnstate=0;
 void setup ()
 {
@@ -41,7 +43,7 @@ void setup ()
 
 void loop ()
 {
-Temporizador_por_Salida2();
+Temporizador_por_Salida3();
 btnstate=readBtns();
 delay(150);
 
@@ -111,14 +113,14 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         if(setup_item==0){push_enter=0;lcd.clear();}
         setup_item=1;
         item_modify=val_increment(enter, item_modify, 7);
-        DATE[timer_select][item_modify]=val_increment(updown, DATE[timer_select][item_modify], 2);
+        toglebit(DIAS[timer_select], item_modify);
         lcd.setCursor(0, 0);
         lcd.print(" L M M J V S D");
         lcd.setCursor(0, 1);
 		lcd.print("|");
-        for (int8_t i=0; i<7; i++)
+        for (int8_t i=6; i>0; i--)
         {
-          if (DATE[timer_select][i]!=0)
+          if ((bitRead(DIAS[timer_select], i))== 0 )
           {
             lcd.print("O");
             lcd.print("|");
@@ -179,7 +181,6 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
       if (btnstate==BtnNone && push_enter==1){push_enter=0;setup_menu=0; lcd.clear();}
       break;
     }
-
 }
 //######################################################################################################
 else
@@ -197,6 +198,29 @@ void Temporizador_por_Salida2()
         for (int j = 0; j < 7; j++)
         {
           if (DATE[i][j]==1)
+          {
+            if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
+                {
+                if(now.hour()==Timer1[i][0] && now.minute()==Timer1[i][1] && now.second()==Timer1[i][2])  //verifica el tiempo de cada timer
+                    {
+                                  //Salida      on/off
+                    digitalWrite( Salida[Timer1[i][4]], Timer1[i][3]);
+                    //PORTD=(Timer1[i][3]<<PORT6);
+                    }
+                } 
+          }
+
+        }
+    }
+}
+void Temporizador_por_Salida3()
+{
+  DateTime now = rtc.now();
+  for (int i = 0; i < NumTimer; i++)//verifica la programacion de cada timer
+    {
+        for (int j = 0; j < 7; j++)
+        {
+          if ((bitRead(DIAS[i], j))==1)
           {
             if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
                 {
@@ -295,4 +319,13 @@ void item_blink(uint8_t col, uint8_t row)
   lcd.setCursor(col, row);
   lcd.print(" ");
   delay(100);
+}
+void toglebit(byte a, uint8_t bita)
+{
+  if ((btnstate==BtnNone && push_up==1)||(btnstate==BtnNone && push_down==1))
+  {
+    togle^=1;//bitToggle(a, bita);
+    bitWrite(a, bita, togle);
+  }
+  
 }
