@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <Sodaq_DS3231.h>
 #include <LiquidCrystal.h>
+#include <TimerOne.h>
 #define NumTimer 3 
 #define BtnEnter 1
 #define BtnUp 2
@@ -10,6 +11,7 @@
 #define NumSalidas 3
 #define enter 0
 #define updown 1
+volatile long int Time=0;
 uint8_t rs = 13, rw=12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, rw, en, d4, d5, d6, d7);
 char DiaSemana[][4] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
@@ -21,7 +23,7 @@ bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
 uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
-uint8_t Timer1[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
+uint8_t Timmer[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
                               {0,0,3,1,0},
                               {0,0,0,1,0}};
 byte DIAS[NumTimer]={0b00000000, 0b00100000,0b00011111};
@@ -29,7 +31,11 @@ bool togle=0;
 uint8_t btnstate=0;
 void setup ()
 {
+ 
+  Timer1.initialize(100000);//100ms inicializa el timer a 100ms
+  Timer1.attachInterrupt(currenttime);
   Serial.begin(9600);
+  //AT24C32(0x57);
   Wire.begin();
   rtc.begin();
   lcd.begin(16, 2);
@@ -40,7 +46,13 @@ void setup ()
    pinMode(Salida[i], OUTPUT);
   }
 }
+void currenttime(void)
+{
 
+  Time=!Time;
+  if(Time>1000)Time=0;
+
+}
 void loop ()
 {
 Temporizador_por_Salida3();
@@ -65,7 +77,7 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
       if (setup_item==0)
       {
           lcd.setCursor(0, 0);
-          lcd.print("CONFIG TIMER ");
+          lcd.print("CONFIG TIMER");
           lcd.print(timer_select);
           lcd.setCursor(0, 1);
           lcd.print("SELECT TIMER");
@@ -74,27 +86,27 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
       }
       if ( (btnstate==BtnNone && push_enter==1) || setup_item!=0)
       {
-        if(setup_item==0){push_enter=0; lcd.clear(); }
+        if(setup_item==0){push_enter=0; lcd.clear();interrupts();}
         setup_item=1;
         item_modify=val_increment(enter, item_modify, 3);
         if (item_modify==0){timer_select=val_increment(updown, timer_select, NumTimer);item_blink(2,1);}
         if (item_modify==2){item_val=NumSalidas;item_blink(7,1);}
         if (item_modify==1){item_val=2;item_blink(12,1);} 
-        if (item_modify!=0){Timer1[timer_select][item_modify+2]=val_increment(updown, Timer1[timer_select][item_modify+2], item_val);} 
+        if (item_modify!=0){Timmer[timer_select][item_modify+2]=val_increment(updown, Timmer[timer_select][item_modify+2], item_val);} 
         lcd.setCursor(0, 0);
         lcd.print("TIMER|OUT|ON/OFF");
         lcd.setCursor(2, 1);
-        lcd.print(timer_select);
+        if(Time==0)lcd.print(timer_select);
         lcd.setCursor(5, 1);
         lcd.print("|");
         lcd.setCursor(7, 1);
-        lcd.print(Timer1[timer_select][4]);
+        lcd.print(Timmer[timer_select][4]);
         lcd.setCursor(9, 1);
         lcd.print("|");
         //lcd.print(" | ");
-        if ( Timer1[timer_select][3]==1){lcd.setCursor(12, 1);lcd.print("ON");}
-        if ( Timer1[timer_select][3]==0){lcd.setCursor(12, 1);lcd.print("OFF");}
-        if (btnstate==BtnNone && push_back==1){setup_item=0; item_val=0; item_modify=0; push_back=0;lcd.clear();}
+        if ( Timmer[timer_select][3]==1){lcd.setCursor(12, 1);lcd.print("ON");}
+        if ( Timmer[timer_select][3]==0){lcd.setCursor(12, 1);lcd.print("OFF");}
+        if (btnstate==BtnNone && push_back==1){setup_item=0; item_val=0; item_modify=0; push_back=0;lcd.clear();noInterrupts();}
       }
       break;
 
@@ -113,12 +125,18 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         if(setup_item==0){push_enter=0;lcd.clear();}
         setup_item=1;
         item_modify=val_increment(enter, item_modify, 7);
-        toglebit(DIAS[timer_select], item_modify);
+        if (btnstate==BtnNone && (push_up==1||push_down==1))
+        {
+          bitToggle(DIAS[timer_select], item_modify);/* code */
+          lcd.clear();
+          push_up=0;
+          push_down=0;
+        }
         lcd.setCursor(0, 0);
         lcd.print(" L M M J V S D");
         lcd.setCursor(0, 1);
 		lcd.print("|");
-        for (int8_t i=6; i>0; i--)
+        for (int8_t i=0; i<7; i++)
         {
           if ((bitRead(DIAS[timer_select], i))== 0 )
           {
@@ -154,20 +172,20 @@ if ((btnstate == BtnNone && push_enter==1) || setup_menu!=0)
         if (item_modify==0){item_val=24;item_blink(7,1);}
         if (item_modify==1){item_val=60;item_blink(11,1);}
         if (item_modify==2){item_val=60;item_blink(14,1);}
-        Timer1[timer_select][item_modify]=val_increment(updown, Timer1[timer_select][item_modify], item_val);
+        Timmer[timer_select][item_modify]=val_increment(updown, Timmer[timer_select][item_modify], item_val);
         lcd.setCursor(0, 0);
         lcd.print("TIMER");
         lcd.print(timer_select);
         lcd.print(" H | M | S");
         lcd.setCursor(7, 1);
-        lcd.print(Timer1[timer_select][0]);
+        lcd.print(Timmer[timer_select][0]);
         lcd.setCursor(9, 1);
         lcd.print(":");
         lcd.setCursor(11, 1);
-        lcd.print(Timer1[timer_select][1]);
+        lcd.print(Timmer[timer_select][1]);
         lcd.setCursor(13, 1);
         lcd.print(":");
-        lcd.print(Timer1[timer_select][2]);
+        lcd.print(Timmer[timer_select][2]);
         if (btnstate==BtnNone && push_back==1){setup_item=0;item_modify=0;push_back=0;lcd.clear();}
       }
       break;
@@ -201,11 +219,11 @@ void Temporizador_por_Salida2()
           {
             if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
                 {
-                if(now.hour()==Timer1[i][0] && now.minute()==Timer1[i][1] && now.second()==Timer1[i][2])  //verifica el tiempo de cada timer
+                if(now.hour()==Timmer[i][0] && now.minute()==Timmer[i][1] && now.second()==Timmer[i][2])  //verifica el tiempo de cada timer
                     {
                                   //Salida      on/off
-                    digitalWrite( Salida[Timer1[i][4]], Timer1[i][3]);
-                    //PORTD=(Timer1[i][3]<<PORT6);
+                    digitalWrite( Salida[Timmer[i][4]], Timmer[i][3]);
+                    //PORTD=(Timmer[i][3]<<PORT6);
                     }
                 } 
           }
@@ -224,11 +242,11 @@ void Temporizador_por_Salida3()
           {
             if ((now.dayOfWeek()) >= j+1) //Verifica los dias de la semana asignados a cada timer
                 {
-                if(now.hour()==Timer1[i][0] && now.minute()==Timer1[i][1] && now.second()==Timer1[i][2])  //verifica el tiempo de cada timer
+                if(now.hour()==Timmer[i][0] && now.minute()==Timmer[i][1] && now.second()==Timmer[i][2])  //verifica el tiempo de cada timer
                     {
                                   //Salida      on/off
-                    digitalWrite( Salida[Timer1[i][4]], Timer1[i][3]);
-                    //PORTD=(Timer1[i][3]<<PORT6);
+                    digitalWrite( Salida[Timmer[i][4]], Timmer[i][3]);
+                    //PORTD=(Timmer[i][3]<<PORT6);
                     }
                 } 
           }
@@ -316,16 +334,14 @@ void pantalla_principal()
 }
 void item_blink(uint8_t col, uint8_t row)
 {
-  lcd.setCursor(col, row);
-  lcd.print(" ");
-  delay(100);
-}
-void toglebit(byte a, uint8_t bita)
-{
-  if ((btnstate==BtnNone && push_up==1)||(btnstate==BtnNone && push_down==1))
+  if (Time==1)
   {
-    togle^=1;//bitToggle(a, bita);
-    bitWrite(a, bita, togle);
+  lcd.setCursor(col, row);
+  lcd.print(" "); /* code */
+  
   }
   
+  //lcd.setCursor(col, row);
+  //lcd.print(" ");
+  //delay(100);
 }
