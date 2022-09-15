@@ -12,21 +12,28 @@
 #define enter 0
 #define updown 1
 volatile long int Time=0;
-uint8_t rs = 13, rw=12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-LiquidCrystal lcd(rs, rw, en, d4, d5, d6, d7);
+//LiquidCrystal lcd(rs, rw, en, d4, d5, d6, d7)
+LiquidCrystal lcd(13, 11, 5, 4, 3, 2);
 char DiaSemana[][4] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
 uint8_t Salida[NumSalidas] ={6, 7, 8}; //configurar pines digitales de acuerdo al numero de salidas si se modifica num salidas el vector se modifica de acuerdo a los pines de salida
 short BtnAdc = 0;
 bool push_enter=0, push_back=0, push_down=0, push_up=0;
-int8_t timer_select=0, setup_menu=0, item_val=0, setup_item=0, item_menu=0, item_modify=0, lastsecond=0;                         
+int8_t timer_select=0, setup_menu=0, item_val=0, setup_item=0, item_menu=0, item_modify=0, lastsecond=0;  
+                       
 bool DATE[NumTimer][7]={{1,1,1,1,1,1,1},  //configuracion de dias de cada timer#####################################
                         {1,1,1,1,1,1,1},
                         {1,1,1,1,1,1,1}};
-uint8_t Days[7]={1,2,3,4,5,6,7};// DIAS L,M,M,J,V,S,D ##############################################################
-uint8_t Timmer[NumTimer][5]= {{0,0,3,1,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
-                              {0,0,3,1,0},
-                              {0,0,0,1,0}};
-byte DIAS[NumTimer]={0b00000000, 0b00100000,0b00011111};
+                        
+                        // ## H-M-S-OUT-ON/OFF
+uint8_t Timmer[NumTimer][5]= {{0,0,0,0,0}, // ## H-M-S-ON/OFF-OUT ####CONFIGURACION DE TIEMPO PARA CADA TIMER
+                              {1,0,0,0,0},
+                              {2,0,0,0,0}};
+
+                    //XbxSVJMMLD  bit 0 es DOMINGO hasta bit 6 es SABADO
+byte DIAS[NumTimer]={ 0b00000000, //CONFIGURACION DE LOS DIAS DE CADA TEMPORIZADOR 1 DIA ACTIVO, 0 DIA INACTIVO
+                      0b00100000,
+                      0b00011111}; 
+
 bool togle=0;
 uint8_t btnstate=0;
 void setup ()
@@ -231,7 +238,9 @@ void Temporizador_por_Salida2()
         }
     }
 }
-void Temporizador_por_Salida3()
+
+
+void Temporizador_por_Salida3() 
 {
   DateTime now = rtc.now();
   for (int i = 0; i < NumTimer; i++)//verifica la programacion de cada timer
@@ -255,47 +264,32 @@ void Temporizador_por_Salida3()
     }
 }
 
+
+//#####FUNCION PARA INCREMENTAR VALORES SEGUN EL BOTON PRESIONADO, INCREMENTA O DISMINUYE LA VARIABLE DECLARADA EN LA FUNCION
 int8_t val_increment(bool Btn, int8_t item, int8_t num_item)
 {
 if(Btn==0)
 {
-  if (btnstate==BtnNone && push_enter==1) 
-    {
-      item++;
-      if ( item == num_item)
-      {
-        item = 0;
-      }
+  if (btnstate==BtnNone && push_enter==1) {item++;
+      if ( item == num_item){item = 0;}
       push_enter=0;
       lcd.clear();
     }
     return item; 
 }
 else
-  if(btnstate==BtnNone && push_up==1) 
-    {
-      item++;
-      if ( item == num_item)
-      {
-        item = 0;
-      }
+  if(btnstate==BtnNone && push_up==1) {item++;
+      if ( item == num_item){item = 0;}
       push_up=0;
-      lcd.clear();
-    }
-  if (btnstate==BtnNone && push_down ==1) 
-    {
-      item--;
-      if ( item == -1 )
-      {
-        item = num_item-1;
-      }
+      lcd.clear();}
+  if (btnstate==BtnNone && push_down ==1) {item--;
+      if ( item == -1 ){ item = num_item-1;}
       push_down=0;
-      lcd.clear();
-    }
+      lcd.clear();}
     return item; 
 }
 
-int8_t readBtns()
+int8_t readBtns()//##FUNCION PARA LEER QUE BOTON SE ESTA PRESIONANDO DESDE LA ENTRADA DEL ADC
 {
   BtnAdc=analogRead(1);
   if ( BtnAdc >= 1019) return BtnEnter;
@@ -304,7 +298,7 @@ int8_t readBtns()
   if ( BtnAdc >= 390 && BtnAdc <= 420 ) return BtnBack;
   return BtnNone;
 }
-
+//FUNCION QUE SE EJECUTA CUANDO NO SE ESTA HACIENDO NADA Y SOLO SE MUESTRA LA HORA DEL RTC
 void pantalla_principal()
 {
   
@@ -325,13 +319,15 @@ void pantalla_principal()
   lcd.print(':');
   lcd.print(now.second(), DEC);
   lcd.print(' ');
-  lcd.print(DiaSemana[now.dayOfWeek()]);
+  lcd.print(DiaSemana[now.dayOfWeek()]-1);
   }
   lastsecond=now.second();
   
   //delay(250); 
   //lcd.clear();
 }
+
+//#####333333333########################3FUNCION PARA PARPADEAR EL VALOR SELECIONADO EN EL MENU
 void item_blink(uint8_t col, uint8_t row)
 {
   if (Time==1)
